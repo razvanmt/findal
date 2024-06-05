@@ -5,7 +5,7 @@
 
 ## Proof of Concept
 - [x] windows support for now (developed on windows)
-- [x] index all files of a specified drive
+- [x] index all files of a hard-coded drive (for now)
 - [x] search for the file path using the Search box
 - [x] click the `FileName` to open the file in explorer
 - [x] real-time search result behaviour
@@ -13,6 +13,7 @@
 ## Next steps
 - [ ] system-wide file indexing (issues with windows permissions when indexing certain directories)
 - [ ] better UI
+- [ ] ...
 
 ## Build
 1. Clone the repository locally
