@@ -1,11 +1,14 @@
 <template>
   <div id="app">
-    <h1>findal</h1>
-    <button @click="indexFiles">Index Files</button>
-    <input v-model="fileName" placeholder="Enter file name" />
-    <button @click="searchFile">Search</button>
+    <h1>File Indexer</h1>
+    <button @click="indexFiles" :disabled="loading">Index Files</button>
+    <input @keydown.enter="searchFile" v-model="fileName" placeholder="Enter file name" />
+    <input v-model="searchQuery" placeholder="Search files" />
     <p>{{ result }}</p>
-    <table>
+
+    <div v-if="loading" class="spinner"></div>
+
+    <table v-if="!loading">
       <thead>
         <tr>
           <th>File Name</th>
@@ -13,27 +16,40 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="file in indexedFiles" :key="file.name">
+        <tr v-for="file in filteredFiles" :key="file.name">
           <td><a href="#" @click.prevent="openFile(file.name)">{{ file.name }}</a></td>
           <td>{{ file.size }}</td>
         </tr>
       </tbody>
     </table>
+    <div v-if="!loading && !searchQuery">
+      <button @click="loadMore" :disabled="loading">Load More</button>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { invoke } from '@tauri-apps/api'
 
 const fileName = ref('')
 const result = ref('')
 const indexedFiles = ref([])
+const displayedFiles = ref([])
+const loading = ref(false)
+const searchQuery = ref('')
+const offset = ref(0)
+const limit = ref(100)
 
 const indexFiles = async () => {
+  loading.value = true
   await invoke('index_files')
   alert('Indexing completed')
-  fetchIndexedFiles()
+  offset.value = 0
+  indexedFiles.value = []
+  displayedFiles.value = []
+  loadAllFiles()
+  loading.value = false
 }
 
 const searchFile = async () => {
@@ -41,13 +57,30 @@ const searchFile = async () => {
   result.value = response ? `File found: ${response}` : 'File not found'
 }
 
-const fetchIndexedFiles = async () => {
-  const files = await invoke('get_indexed_files')
-  indexedFiles.value = files.map(file => ({
-    name: file[0],
-    size: file[1]
-  }))
-  console.log('Indexed Files:', indexedFiles.value) // Add this line to debug
+const loadAllFiles = async () => {
+  loading.value = true
+  let allFiles = []
+  let tempOffset = 0
+  while (true) {
+    const files = await invoke('get_indexed_files', { offset: tempOffset, limit: limit.value })
+    if (files.length === 0) break
+    allFiles = allFiles.concat(files.map(file => ({
+      name: file[0],
+      size: file[1],
+      path: file[2]
+    })))
+    tempOffset += limit.value
+  }
+  indexedFiles.value = allFiles
+  displayedFiles.value = allFiles.slice(0, limit.value)
+  offset.value = limit.value
+  loading.value = false
+}
+
+const loadMore = () => {
+  const nextBatch = indexedFiles.value.slice(offset.value, offset.value + limit.value)
+  displayedFiles.value = displayedFiles.value.concat(nextBatch)
+  offset.value += limit.value
 }
 
 const openFile = async (fileName) => {
@@ -60,7 +93,15 @@ const openFile = async (fileName) => {
   }
 }
 
-onMounted(fetchIndexedFiles)
+const filteredFiles = computed(() => {
+  if (searchQuery.value) {
+    return indexedFiles.value.filter(file => file.name.toLowerCase().includes(searchQuery.value.toLowerCase()))
+  } else {
+    return displayedFiles.value
+  }
+})
+
+onMounted(loadAllFiles)
 </script>
 
 <style>
@@ -88,5 +129,20 @@ a {
   color: blue;
   cursor: pointer;
   text-decoration: underline;
+}
+
+.spinner {
+  border: 16px solid #f3f3f3;
+  border-top: 16px solid #3498db;
+  border-radius: 50%;
+  width: 120px;
+  height: 120px;
+  animation: spin 2s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>
