@@ -1,16 +1,17 @@
 # findal 
 
-'findal' indexes all you
+'findal' indexes all your files and makes them easier to find!
 
 ## Proof of Concept
 - [x] windows support for now (developed on windows)
 - [x] index all files of a specified drive
 - [x] search for the file path using the Search box
 - [x] click the `FileName` to open the file in explorer
+- [x] real-time search result behaviour
+- 
 
 ## Next steps
 - [ ] system-wide file indexing
-- [ ] real-time search result behaviour
 - [ ] 
 
 ## Build
